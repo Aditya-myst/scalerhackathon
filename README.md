@@ -118,6 +118,22 @@ async def ask_openai(prompt_text, history):
 
 ---
 
+### 📂 Using Your Own Custom Datasets
+By default, the cloud-hosted environment runs the standard "Escape Room" puzzle (`users.json`, `corrupted.json`). 
+
+However, if you clone this repository to run locally, the environment is highly modular. You can inject your own virtual datasets (CSV, JSON, XML) directly into the environment to test how your AI handles different data engineering challenges!
+
+Simply modify the initialization in `server/environment.py`:
+```python
+# You can pass ANY dictionary of virtual files into the sandbox!
+my_custom_data = {
+    "sales_data.csv": "id,amount,status\n1,500,SUCCESS\n2,1000,FAILED",
+    "messy_logs.json": '[{"error": "null pointer"}, {"error": "timeout"}]'
+}
+
+# The environment will now serve your custom files to the AI Agent
+env = DataEngineerEnv(custom_files=my_custom_data)
+
 ## 🤖 Running the Built-In Autonomous Agent
 This repository includes a pre-built autonomous agent powered by **Google Gemini**. It demonstrates how an LLM can navigate the environment, fix its own SQL errors, and beat all 3 levels.
 
