@@ -2,11 +2,14 @@ import asyncio
 from client import DataEngineerClient
 from models import SQLAction
 
+# Use your live Hugging Face Space URL
+REMOTE_URL = "https://aadiiityaa007-data-engineer-env.hf.space"
+
 async def main():
-    print("Testing the AI Escape Room...")
+    print(f"Testing the AI Escape Room on {REMOTE_URL}...")
     
-    # 1. Connect to the local web server
-    async with DataEngineerClient(base_url="http://127.0.0.1:8000") as client:
+    # 1. Connect to the remote server
+    async with DataEngineerClient(base_url=REMOTE_URL) as client:
         
         # 2. Reset the environment (Start the game)
         result = await client.reset()

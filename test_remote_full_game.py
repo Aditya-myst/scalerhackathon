@@ -2,9 +2,12 @@ import asyncio
 from client import DataEngineerClient
 from models import SQLAction
 
+# Use your live Hugging Face Space URL
+REMOTE_URL = "https://aadiiityaa007-data-engineer-env.hf.space"
+
 async def main():
-    async with DataEngineerClient(base_url="http://127.0.0.1:8000") as client:
-        print("--- STARTING THE FULL GAME ---")
+    async with DataEngineerClient(base_url=REMOTE_URL) as client:
+        print("--- STARTING THE FULL GAME ON HUGGING FACE ---")
         obs = await client.reset()
         
         # We will keep a running total, just like the real judges do!
