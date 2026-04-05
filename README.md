@@ -8,7 +8,7 @@
 [![Framework: OpenEnv](https://img.shields.io/badge/Framework-OpenEnv-green)](#)
 [![Python 3.11](https://img.shields.io/badge/Python-3.11-blue.svg)](#)
 
-*(Drag and drop your demo video `.mp4` here when editing on GitHub!)*
+https://github.com/user-attachments/assets/71ae5ce4-a30d-453d-9347-a6729e9c98a5
 
 ## 📖 Overview
 The **Data Engineer Escape Room** is a Reinforcement Learning (RL) environment designed to evaluate and train autonomous AI agents in real-world data engineering tasks. 
