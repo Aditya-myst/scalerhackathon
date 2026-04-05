@@ -58,7 +58,7 @@ class DataEngineerEnv(Environment):
         return SQLObservation(result=welcome_msg, success=True, reward=self.reward, done=self.done)
 
     def step(self, action: SQLAction) -> SQLObservation:
-        self.reward = 0.0 
+        self.reward = -0.01
         self._state.step_count += 1
         cmd = action.command.lower()
         params = action.parameters
@@ -76,13 +76,13 @@ class DataEngineerEnv(Environment):
                 cursor.execute(query)
                 self.db.commit()
                 
-                self.reward += 0.05 
                 
                 query_upper = query.strip().upper()
                 if query_upper.startswith("SELECT") or query_upper.startswith("PRAGMA"):
                     rows = [dict(row) for row in cursor.fetchall()]
                     return SQLObservation(result=json.dumps(rows), success=True, reward=self.reward, done=self.done)
                 else:
+                    self.reward += 0.05 
                     return SQLObservation(result=f"SQL executed successfully. Rows affected: {cursor.rowcount}", success=True, reward=self.reward, done=self.done)
 
             elif cmd == "submit_task":

@@ -1,255 +1,109 @@
+```markdown
 ---
 title: Data Engineer Env Environment Server
-emoji: ⚽
+emoji: 🗄️
 colorFrom: gray
 colorTo: yellow
 sdk: docker
 pinned: false
 app_port: 8000
-base_path: /web
-tags:
-  - openenv
 ---
 
-# Data Engineer Env Environment
+# 🚀 AI Data Engineer Escape Room (OpenEnv)
+**Built for the Meta x Hugging Face OpenEnv Hackathon**
 
-A simple test environment that echoes back messages. Perfect for testing the env APIs as well as demonstrating environment usage patterns.
+[![Hosted on Hugging Face Spaces](https://img.shields.io/badge/🤗%20Hosted%20on-Hugging%20Face-blue)](https://huggingface.co/spaces/aadiiityaa007/data_engineer_env)
+[![Framework: OpenEnv](https://img.shields.io/badge/Framework-OpenEnv-green)](#)
+[![Python 3.11](https://img.shields.io/badge/Python-3.11-blue.svg)](#)
 
-## Quick Start
+## 📖 Overview
+The **Data Engineer Escape Room** is a Reinforcement Learning (RL) environment designed to evaluate and train autonomous AI agents in real-world data engineering tasks. 
 
-The simplest way to use the Data Engineer Env environment is through the `DataEngineerEnv` class:
+Instead of simple text games, this environment provides a secure, in-memory **SQLite sandbox** and virtual file system. The agent must autonomously read raw data (JSON), construct relational databases, and clean corrupted datasets (e.g., negative ages, missing fields) using raw SQL commands.
 
-```python
-from data_engineer_env import DataEngineerAction, DataEngineerEnv
+## 🎯 Hackathon Criteria Met
+1. **Built on OpenEnv:** Uses `openenv.core.env_server` for standardized WebSocket communication.
+2. **Hugging Face Integration:** Fully dockerized and deployed live on Hugging Face Spaces.
+3. **Strict Graders:** Tasks aren't graded by LLM vibes; they are graded by hidden SQL queries executing against the agent's database to verify exact row counts and data integrity.
+4. **Resource-Optimized RL (Energy Penalties):** The agent is penalized `-0.01` reward points for every action (compute cycle) it takes, forcing it to write efficient SQL pipelines rather than blindly guessing or spamming the server.
 
-try:
-    # Create environment from Docker image
-    data_engineer_envenv = DataEngineerEnv.from_docker_image("data_engineer_env-env:latest")
+---
 
-    # Reset
-    result = data_engineer_envenv.reset()
-    print(f"Reset: {result.observation.echoed_message}")
+## ⚙️ Environment Mechanics
 
-    # Send multiple messages
-    messages = ["Hello, World!", "Testing echo", "Final message"]
+### 1. The Action Space
+The agent interacts with the environment by sending JSON payloads with one of three commands:
+* **`read_file`**: Inspects virtual files.
+  * *Example:* `{"command": "read_file", "parameters": {"filename": "users.json"}}`
+* **`execute_sql`**: Runs SQL commands against the SQLite sandbox.
+  * *Example:* `{"command": "execute_sql", "parameters": {"query": "CREATE TABLE users (id INTEGER, age INTEGER)"}}`
+* **`submit_task`**: Triggers the Grader to evaluate the current database state.
+  * *Example:* `{"command": "submit_task", "parameters": {"task": "easy"}}`
 
-    for msg in messages:
-        result = data_engineer_envenv.step(DataEngineerAction(message=msg))
-        print(f"Sent: '{msg}'")
-        print(f"  → Echoed: '{result.observation.echoed_message}'")
-        print(f"  → Length: {result.observation.message_length}")
-        print(f"  → Reward: {result.reward}")
+### 2. The Reward Function
+This environment utilizes a strict reward system to train agents:
+* 🔴 **-0.01**: Compute Penalty (Applied to *every* action taken).
+* 🔴 **-0.05**: Syntax Penalty (Invalid SQL, missing files, or system errors).
+* 🟢 **+0.05**: Successful DML Execution (Successfully altering data, e.g., `INSERT` or `CREATE`).
+* 🟢 **+0.30 to +0.40**: Level Completion (Passing the strict SQL Grader).
 
-finally:
-    # Always clean up
-    data_engineer_envenv.close()
-```
+### 3. The Levels
+1. **Easy:** Create a table and insert raw data.
+2. **Medium:** Create relational tables using `FOREIGN KEY` constraints.
+3. **Hard (Data Cleaning):** Read corrupted data and write an `INSERT` statement that dynamically filters out invalid constraints (e.g., ages < 0) before insertion.
 
-That's it! The `DataEngineerEnv.from_docker_image()` method handles:
-- Starting the Docker container
-- Waiting for the server to be ready
-- Connecting to the environment
-- Container cleanup when you call `close()`
+---
 
-## Building the Docker Image
+## 🛠️ How to Connect Your Own AI Agent
 
-Before using the environment, you need to build the Docker image:
+This environment is live and accepts remote WebSocket connections. You can attach *any* LLM (OpenAI, Anthropic, Gemini, Llama) to it.
 
+### 1. Install Dependencies
 ```bash
-# From project root
-docker build -t data_engineer_env-env:latest -f server/Dockerfile .
+pip install openenv
 ```
 
-## Deploying to Hugging Face Spaces
-
-You can easily deploy your OpenEnv environment to Hugging Face Spaces using the `openenv push` command:
-
-```bash
-# From the environment directory (where openenv.yaml is located)
-openenv push
-
-# Or specify options
-openenv push --namespace my-org --private
-```
-
-The `openenv push` command will:
-1. Validate that the directory is an OpenEnv environment (checks for `openenv.yaml`)
-2. Prepare a custom build for Hugging Face Docker space (enables web interface)
-3. Upload to Hugging Face (ensuring you're logged in)
-
-### Prerequisites
-
-- Authenticate with Hugging Face: The command will prompt for login if not already authenticated
-
-### Options
-
-- `--directory`, `-d`: Directory containing the OpenEnv environment (defaults to current directory)
-- `--repo-id`, `-r`: Repository ID in format 'username/repo-name' (defaults to 'username/env-name' from openenv.yaml)
-- `--base-image`, `-b`: Base Docker image to use (overrides Dockerfile FROM)
-- `--private`: Deploy the space as private (default: public)
-
-### Examples
-
-```bash
-# Push to your personal namespace (defaults to username/env-name from openenv.yaml)
-openenv push
-
-# Push to a specific repository
-openenv push --repo-id my-org/my-env
-
-# Push with a custom base image
-openenv push --base-image ghcr.io/meta-pytorch/openenv-base:latest
-
-# Push as a private space
-openenv push --private
-
-# Combine options
-openenv push --repo-id my-org/my-env --base-image custom-base:latest --private
-```
-
-After deployment, your space will be available at:
-`https://huggingface.co/spaces/<repo-id>`
-
-The deployed space includes:
-- **Web Interface** at `/web` - Interactive UI for exploring the environment
-- **API Documentation** at `/docs` - Full OpenAPI/Swagger interface
-- **Health Check** at `/health` - Container health monitoring
-- **WebSocket** at `/ws` - Persistent session endpoint for low-latency interactions
-
-## Environment Details
-
-### Action
-**DataEngineerAction**: Contains a single field
-- `message` (str) - The message to echo back
-
-### Observation
-**DataEngineerObservation**: Contains the echo response and metadata
-- `echoed_message` (str) - The message echoed back
-- `message_length` (int) - Length of the message
-- `reward` (float) - Reward based on message length (length × 0.1)
-- `done` (bool) - Always False for echo environment
-- `metadata` (dict) - Additional info like step count
-
-### Reward
-The reward is calculated as: `message_length × 0.1`
-- "Hi" → reward: 0.2
-- "Hello, World!" → reward: 1.3
-- Empty message → reward: 0.0
-
-## Advanced Usage
-
-### Connecting to an Existing Server
-
-If you already have a Data Engineer Env environment server running, you can connect directly:
-
+### 2. Python Client Example
 ```python
-from data_engineer_env import DataEngineerEnv
+import asyncio
+from openenv.core.env_client import EnvironmentClient
+from models import SQLAction
 
-# Connect to existing server
-data_engineer_envenv = DataEngineerEnv(base_url="<ENV_HTTP_URL_HERE>")
+REMOTE_URL = "https://aadiiityaa007-data-engineer-env.hf.space"
 
-# Use as normal
-result = data_engineer_envenv.reset()
-result = data_engineer_envenv.step(DataEngineerAction(message="Hello!"))
+async def main():
+    # Connect to the live Hugging Face Environment
+    async with EnvironmentClient(base_url=REMOTE_URL) as client:
+        
+        # 1. Reset environment & get the first prompt
+        obs = await client.reset()
+        print("System:", obs.observation.result)
+        
+        # 2. Take an action
+        action = SQLAction(command="read_file", parameters={"filename": "users.json"})
+        result = await client.step(action)
+        
+        print("Result:", result.observation.result)
+        print("Reward Earned:", result.reward)
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
-Note: When connecting to an existing server, `data_engineer_envenv.close()` will NOT stop the server.
+---
 
-### Using the Context Manager
+## 🤖 Running the Built-In Autonomous Agent
+This repository includes a pre-built autonomous agent powered by **Google Gemini**. It demonstrates how an LLM can navigate the environment, fix its own SQL errors, and beat all 3 levels.
 
-The client supports context manager usage for automatic connection management:
-
-```python
-from data_engineer_env import DataEngineerAction, DataEngineerEnv
-
-# Connect with context manager (auto-connects and closes)
-with DataEngineerEnv(base_url="http://localhost:8000") as env:
-    result = env.reset()
-    print(f"Reset: {result.observation.echoed_message}")
-    # Multiple steps with low latency
-    for msg in ["Hello", "World", "!"]:
-        result = env.step(DataEngineerAction(message=msg))
-        print(f"Echoed: {result.observation.echoed_message}")
-```
-
-The client uses WebSocket connections for:
-- **Lower latency**: No HTTP connection overhead per request
-- **Persistent session**: Server maintains your environment state
-- **Efficient for episodes**: Better for many sequential steps
-
-### Concurrent WebSocket Sessions
-
-The server supports multiple concurrent WebSocket connections. To enable this,
-modify `server/app.py` to use factory mode:
-
-```python
-# In server/app.py - use factory mode for concurrent sessions
-app = create_app(
-    DataEngineerEnvironment,  # Pass class, not instance
-    DataEngineerAction,
-    DataEngineerObservation,
-    max_concurrent_envs=4,  # Allow 4 concurrent sessions
-)
-```
-
-Then multiple clients can connect simultaneously:
-
-```python
-from data_engineer_env import DataEngineerAction, DataEngineerEnv
-from concurrent.futures import ThreadPoolExecutor
-
-def run_episode(client_id: int):
-    with DataEngineerEnv(base_url="http://localhost:8000") as env:
-        result = env.reset()
-        for i in range(10):
-            result = env.step(DataEngineerAction(message=f"Client {client_id}, step {i}"))
-        return client_id, result.observation.message_length
-
-# Run 4 episodes concurrently
-with ThreadPoolExecutor(max_workers=4) as executor:
-    results = list(executor.map(run_episode, range(4)))
-```
-
-## Development & Testing
-
-### Direct Environment Testing
-
-Test the environment logic directly without starting the HTTP server:
-
+1. Clone the repo.
+2. Install requirements: `pip install requests openenv`
+3. Add your Gemini API key inside `autonomous_agent.py`.
+4. Run the agent:
 ```bash
-# From the server directory
-python3 server/data_engineer_env_environment.py
+python autonomous_agent.py
 ```
+Watch the terminal as the AI reads the data, writes the SQL, and escapes the room!
 
-This verifies that:
-- Environment resets correctly
-- Step executes actions properly
-- State tracking works
-- Rewards are calculated correctly
-
-### Running Locally
-
-Run the server locally for development:
-
-```bash
-uvicorn server.app:app --reload
-```
-
-## Project Structure
-
-```
-data_engineer_env/
-├── .dockerignore         # Docker build exclusions
-├── __init__.py            # Module exports
-├── README.md              # This file
-├── openenv.yaml           # OpenEnv manifest
-├── pyproject.toml         # Project metadata and dependencies
-├── uv.lock                # Locked dependencies (generated)
-├── client.py              # DataEngineerEnv client
-├── models.py              # Action and Observation models
-└── server/
-    ├── __init__.py        # Server module exports
-    ├── data_engineer_env_environment.py  # Core environment logic
-    ├── app.py             # FastAPI application (HTTP + WebSocket endpoints)
-    └── Dockerfile         # Container image definition
+---
+*Created by [@codeviaditya](https://github.com/Aditya-myst) for the Meta x Hugging Face Hackathon.*
 ```
