@@ -1,14 +1,11 @@
+# AI Data Engineer Escape Room (OpenEnv)
+**Meta × Hugging Face OpenEnv Hackathon Submission**
 
----
-
-# 🚀 AI Data Engineer Escape Room (OpenEnv)
-**Built for the Meta x Hugging Face OpenEnv Hackathon**
-
-[![Hosted on Hugging Face Spaces](https://img.shields.io/badge/🤗%20Hosted%20on-Hugging%20Face-blue)](https://huggingface.co/spaces/aadiiityaa007/data_engineer_env)
+[![Hosted on Hugging Face Spaces](https://img.shields.io/badge/Hosted%20on-Hugging%20Face-blue)](https://huggingface.co/spaces/aadiiityaa007/data_engineer_env)
 [![Framework: OpenEnv](https://img.shields.io/badge/Framework-OpenEnv-green)](#)
 [![Python 3.11](https://img.shields.io/badge/Python-3.11-blue.svg)](#)
 
-https://github.com/user-attachments/assets/71ae5ce4-a30d-453d-9347-a6729e9c98a5
+*(Drag and drop your demo video `.mp4` here when editing on GitHub!)*
 
 ## 📖 Overview
 The **Data Engineer Escape Room** is a Reinforcement Learning (RL) environment designed to evaluate and train autonomous AI agents in real-world data engineering tasks. 
@@ -23,71 +20,133 @@ Instead of simple text games, this environment provides a secure, in-memory **SQ
 
 ---
 
-## 📡 Environment Endpoints
+## Hackathon requirement mapping
 
-Because this is built on the OpenEnv framework, communication happens via high-speed WebSockets rather than standard REST API endpoints.
+This implementation aligns with OpenEnv hackathon expectations:
 
-* **WebSocket Agent Endpoint:** `wss://aadiiityaa007-data-engineer-env.hf.space` (Handled automatically by the OpenEnv `EnvironmentClient`. This streams observations, rewards, and actions in real-time).
-* **Health Check Endpoint:** `https://aadiiityaa007-data-engineer-env.hf.space/web` (Returns HTTP 200 to satisfy Hugging Face Space deployment requirements).
+1. **Built on OpenEnv**
+   - Uses OpenEnv server/client abstractions for standardized environment interaction.
 
----
+2. **Deployed on Hugging Face Spaces**
+   - Containerized and hosted as a live environment endpoint.
 
-## ⚙️ Environment Mechanics
+3. **Strict grading**
+   - Task completion is validated via hidden SQL checks against actual DB state.
 
-### 1. The Action Space
-The agent interacts with the environment by sending JSON payloads with one of three commands:
-* **`read_file`**: Inspects virtual files.
-  * *Example:* `{"command": "read_file", "parameters": {"filename": "users.json"}}`
-* **`execute_sql`**: Runs SQL commands against the SQLite sandbox.
-  * *Example:* `{"command": "execute_sql", "parameters": {"query": "CREATE TABLE users (id INTEGER, age INTEGER)"}}`
-* **`submit_task`**: Triggers the Grader to evaluate the current database state.
-  * *Example:* `{"command": "submit_task", "parameters": {"task": "easy"}}`
+4. **Reward shaping**
+   - Includes per-step penalty and positive rewards for meaningful progress/task completion.
 
-### 2. The Reward Function
-This environment utilizes a strict reward system to train agents:
-* 🔴 **-0.01**: Compute Penalty (Applied to *every* action taken).
-* 🔴 **-0.05**: Syntax Penalty (Invalid SQL, missing files, or system errors).
-* 🟢 **+0.05**: Successful DML Execution (Successfully altering data, e.g., `INSERT` or `CREATE`).
-* 🟢 **+0.30 to +0.40**: Level Completion (Passing the strict SQL Grader).
-
-### 3. The Levels
-1. **Easy:** Create a table and insert raw data.
-2. **Medium:** Create relational tables using `FOREIGN KEY` constraints.
-3. **Hard (Data Cleaning):** Read corrupted data and write an `INSERT` statement that dynamically filters out invalid constraints (e.g., ages < 0) before insertion.
+5. **Autonomous inference path**
+   - Includes `inference.py` in repository root for standardized automated evaluation.
 
 ---
 
-## 🛠️ How to Connect Your Own AI Agent
+## Architecture
 
-This environment is live and accepts remote WebSocket connections. You can attach *any* LLM to it.
+High-level flow:
 
-### 1. Install Dependencies
-```bash
-pip install openenv
+1. Agent calls `reset()`.
+2. Environment returns initial observation with system task instructions.
+3. Agent iteratively issues actions:
+   - `read_file`
+   - `execute_sql`
+   - `submit_task`
+4. Environment executes action in sandbox and returns:
+   - observation
+   - reward
+   - done
+   - success/failure details
+5. Agent stops on terminal state or max steps.
+6. Script emits strict logs for evaluator parsing.
+
+---
+
+## Environment mechanics
+
+### Action space
+
+The agent acts through JSON commands:
+
+- `read_file`
+  - Example:
+    ```json
+    {"command":"read_file","parameters":{"filename":"users.json"}}
+    ```
+
+- `execute_sql`
+  - Example:
+    ```json
+    {"command":"execute_sql","parameters":{"query":"CREATE TABLE users (id INTEGER, name TEXT, age INTEGER)"}}
+    ```
+
+- `submit_task`
+  - Example:
+    ```json
+    {"command":"submit_task","parameters":{"task":"easy"}}
+    ```
+
+---
+
+### Reward model
+
+Typical shaping (environment-config dependent):
+
+- `-0.01` per step (efficiency penalty)
+- negative reward for invalid actions / SQL errors
+- positive reward for valid progress
+- larger positive reward on validated task completion
+
+This reward structure discourages random action spam and encourages robust planning.
+
+---
+
+### Levels
+
+- **Easy**: basic table creation + data insertion
+- **Medium**: additional schema/data constraints and correctness checks
+- **Hard**: corrupted data cleanup and strict validation constraints
+
+---
+
+## Endpoints and connectivity
+
+- **Environment base URL (Space):**  
+  `https://aadiiityaa007-data-engineer-env.hf.space`
+
+OpenEnv client handles the underlying protocol details.  
+In client code, connect via:
+
+```python
+from openenv.core.env_client import EnvironmentClient
+
+async with EnvironmentClient(base_url="https://aadiiityaa007-data-engineer-env.hf.space") as env:
+    obs = await env.reset()
 ```
 
-### 2. Python Client Example
+---
+
+## Quickstart (remote usage)
+
+### Prerequisites
+- Python 3.11+
+- `pip`
+
+### Install
+```bash
+pip install openenv openai
+```
+
+### Minimal connectivity check
 ```python
 import asyncio
 from openenv.core.env_client import EnvironmentClient
-from models import SQLAction
 
 REMOTE_URL = "https://aadiiityaa007-data-engineer-env.hf.space"
 
 async def main():
-    # Connect to the live Hugging Face Environment
-    async with EnvironmentClient(base_url=REMOTE_URL) as client:
-        
-        # 1. Reset environment & get the first prompt
-        obs = await client.reset()
-        print("System:", obs.observation.result)
-        
-        # 2. Take an action
-        action = SQLAction(command="read_file", parameters={"filename": "users.json"})
-        result = await client.step(action)
-        
-        print("Result:", result.observation.result)
-        print("Reward Earned:", result.reward)
+    async with EnvironmentClient(base_url=REMOTE_URL) as env:
+        obs = await env.reset()
+        print(obs.observation.result)
 
 if __name__ == "__main__":
     asyncio.run(main())
@@ -95,25 +154,42 @@ if __name__ == "__main__":
 
 ---
 
-## 🧠 Using a Different LLM (OpenAI, Anthropic, Llama)
-Because this environment is built on standard WebSockets, it is **100% LLM-agnostic**. You can swap out the "Brain" of the agent to use OpenAI, Anthropic, or local open-source models.
+## Submission inference script (`inference.py`)
 
-To use OpenAI (GPT-4o) instead of Gemini, simply replace the API call in your agent script with this structure:
+This repository includes a submission-ready `inference.py` at project root.
 
-```python
-from openai import AsyncOpenAI
-import os
+### Required environment variables
 
-client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+- `API_BASE_URL`  
+  Default: `https://router.huggingface.co/v1`
+- `MODEL_NAME`  
+  Default: `Qwen/Qwen2.5-72B-Instruct`
+- `HF_TOKEN` (recommended) or `API_KEY`
+- `ENV_BASE_URL`  
+  Default: `https://aadiiityaa007-data-engineer-env.hf.space`
 
-async def ask_openai(prompt_text, history):
-    full_prompt = f"{history}\n\nCURRENT OBSERVATION:\n{prompt_text}"
-    response = await client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": full_prompt}],
-        response_format={ "type": "json_object" } # Forces strict JSON output
-    )
-    return response.choices[0].message.content
+### Why `HF_TOKEN` is needed
+If using Hugging Face Router as your LLM endpoint, authentication is required.  
+Without token/key, model inference calls typically fail with authorization errors.
+
+### Run
+```bash
+python inference.py
+```
+
+### Mandatory stdout contract
+
+The script emits exactly these line types in this order:
+
+1. `[START] ...` (once)
+2. `[STEP] ...` (one per action)
+3. `[END] ...` (always emitted, even on failure)
+
+Example:
+```text
+[START] task=data-engineer env=sqlite model=Qwen/Qwen2.5-72B-Instruct
+[STEP] step=1 action=read_file({"filename":"users.json"}) reward=-0.01 done=false error=null
+[END] success=true steps=30 score=1.00 rewards=-0.01,0.04,...
 ```
 
 ---
@@ -134,24 +210,30 @@ my_custom_data = {
 # The environment will now serve your custom files to the AI Agent
 env = DataEngineerEnv(custom_files=my_custom_data)
 
-## 🤖 Running the Built-In Autonomous Agent
-This repository includes a pre-built autonomous agent powered by **Google Gemini**. It demonstrates how an LLM can navigate the environment, fix its own SQL errors, and beat all 3 levels.
+## Running locally (custom datasets)
 
-1. Clone the repo.
-2. Install requirements: `pip install requests openenv`
-3. Add your Gemini API key inside `autonomous_agent.py`.
-4. Run the agent:
-```bash
-python autonomous_agent.py
+The environment is intentionally modular. You can inject custom virtual files for your own benchmark scenarios.
+
+Example (`server/environment.py` usage pattern):
+
+```python
+my_custom_data = {
+    "sales_data.csv": "id,amount,status\n1,500,SUCCESS\n2,1000,FAILED",
+    "events.json": '[{"event":"checkout","value":1200},{"event":"refund","value":-100}]'
+}
+
+env = DataEngineerEnv(custom_files=my_custom_data)
 ```
-Watch the terminal as the AI reads the data, writes the SQL, and escapes the room!
+
+Use this to build domain-specific tasks (fintech, ecommerce, telemetry, logs, etc.).
 
 ---
 
-## ✅ Integration Testing (The "Golden Path")
-AI models can hallucinate or fail. To prove that this OpenEnv environment is mathematically perfect and bug-free, this repository includes integration tests with hardcoded, 100% correct SQL answers.
+## Integration testing
 
-If you want to verify the environment's strict grading logic without relying on an LLM, run the full game test:
+For deterministic verification (without relying on LLM output variability), include and run a “golden path” test script that executes known-correct action sequences.
+
+Example:
 ```bash
 python test_remote_full_game.py
 ```
