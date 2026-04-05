@@ -1,11 +1,4 @@
----
-title: Data Engineer Env Environment Server
-emoji: 🗄️
-colorFrom: gray
-colorTo: yellow
-sdk: docker
-pinned: false
-app_port: 8000
+
 ---
 
 # 🚀 AI Data Engineer Escape Room (OpenEnv)
@@ -14,6 +7,8 @@ app_port: 8000
 [![Hosted on Hugging Face Spaces](https://img.shields.io/badge/🤗%20Hosted%20on-Hugging%20Face-blue)](https://huggingface.co/spaces/aadiiityaa007/data_engineer_env)
 [![Framework: OpenEnv](https://img.shields.io/badge/Framework-OpenEnv-green)](#)
 [![Python 3.11](https://img.shields.io/badge/Python-3.11-blue.svg)](#)
+
+*(Drag and drop your demo video `.mp4` here when editing on GitHub!)*
 
 ## 📖 Overview
 The **Data Engineer Escape Room** is a Reinforcement Learning (RL) environment designed to evaluate and train autonomous AI agents in real-world data engineering tasks. 
@@ -25,6 +20,15 @@ Instead of simple text games, this environment provides a secure, in-memory **SQ
 2. **Hugging Face Integration:** Fully dockerized and deployed live on Hugging Face Spaces.
 3. **Strict Graders:** Tasks aren't graded by LLM vibes; they are graded by hidden SQL queries executing against the agent's database to verify exact row counts and data integrity.
 4. **Resource-Optimized RL (Energy Penalties):** The agent is penalized `-0.01` reward points for every action (compute cycle) it takes, forcing it to write efficient SQL pipelines rather than blindly guessing or spamming the server.
+
+---
+
+## 📡 Environment Endpoints
+
+Because this is built on the OpenEnv framework, communication happens via high-speed WebSockets rather than standard REST API endpoints.
+
+* **WebSocket Agent Endpoint:** `wss://aadiiityaa007-data-engineer-env.hf.space` (Handled automatically by the OpenEnv `EnvironmentClient`. This streams observations, rewards, and actions in real-time).
+* **Health Check Endpoint:** `https://aadiiityaa007-data-engineer-env.hf.space/web` (Returns HTTP 200 to satisfy Hugging Face Space deployment requirements).
 
 ---
 
@@ -55,7 +59,7 @@ This environment utilizes a strict reward system to train agents:
 
 ## 🛠️ How to Connect Your Own AI Agent
 
-This environment is live and accepts remote WebSocket connections. You can attach *any* LLM (OpenAI, Anthropic, Gemini, Llama) to it.
+This environment is live and accepts remote WebSocket connections. You can attach *any* LLM to it.
 
 ### 1. Install Dependencies
 ```bash
@@ -91,6 +95,29 @@ if __name__ == "__main__":
 
 ---
 
+## 🧠 Using a Different LLM (OpenAI, Anthropic, Llama)
+Because this environment is built on standard WebSockets, it is **100% LLM-agnostic**. You can swap out the "Brain" of the agent to use OpenAI, Anthropic, or local open-source models.
+
+To use OpenAI (GPT-4o) instead of Gemini, simply replace the API call in your agent script with this structure:
+
+```python
+from openai import AsyncOpenAI
+import os
+
+client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+async def ask_openai(prompt_text, history):
+    full_prompt = f"{history}\n\nCURRENT OBSERVATION:\n{prompt_text}"
+    response = await client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": full_prompt}],
+        response_format={ "type": "json_object" } # Forces strict JSON output
+    )
+    return response.choices[0].message.content
+```
+
+---
+
 ## 🤖 Running the Built-In Autonomous Agent
 This repository includes a pre-built autonomous agent powered by **Google Gemini**. It demonstrates how an LLM can navigate the environment, fix its own SQL errors, and beat all 3 levels.
 
@@ -104,5 +131,16 @@ python autonomous_agent.py
 Watch the terminal as the AI reads the data, writes the SQL, and escapes the room!
 
 ---
-*Created by [@codeviaditya](https://github.com/Aditya-myst) for the Meta x Hugging Face Hackathon.*
+
+## ✅ Integration Testing (The "Golden Path")
+AI models can hallucinate or fail. To prove that this OpenEnv environment is mathematically perfect and bug-free, this repository includes integration tests with hardcoded, 100% correct SQL answers.
+
+If you want to verify the environment's strict grading logic without relying on an LLM, run the full game test:
+```bash
+python test_remote_full_game.py
+```
+This script acts as the "perfect player", passing all 3 levels, validating the SQLite sandbox, and proving the cloud server correctly tracks state and total rewards.
+
+---
+*Created by [@Aditya-myst](https://github.com/Aditya-myst) for the Meta x Hugging Face Hackathon.*
 ```

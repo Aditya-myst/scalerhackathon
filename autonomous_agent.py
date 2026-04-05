@@ -7,7 +7,7 @@ from models import SQLAction
 # ==========================================
 # 1. SETUP YOUR GEMINI API KEY HERE
 # ==========================================
-GEMINI_API_KEY = "AIzaSyBLsPD9NZGVnhW1m5fahAG8a32qEAyJowk"
+GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"
 
 # Your live Hugging Face Environment
 REMOTE_URL = "https://aadiiityaa007-data-engineer-env.hf.space"
