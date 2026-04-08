@@ -4,7 +4,7 @@ import os
 import textwrap
 from typing import Any, Dict, List, Optional
 
-from openai import AsyncOpenAI
+from openai import aAsyncOpenAI
 
 from client import DataEngineerClient
 from models import SQLAction
